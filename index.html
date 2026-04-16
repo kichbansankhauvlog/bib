@@ -9,14 +9,13 @@
         :root { --primary: #e63946; --dark: #1d3557; --light: #f1faee; }
         body { font-family: 'Segoe UI', Arial, sans-serif; background: #fafafa; margin: 0; overflow-x: hidden; }
         
-        header { background: var(--dark); color: white; padding: 30px 15px; text-align: center; sticky: top; }
+        header { background: var(--dark); color: white; padding: 30px 15px; text-align: center; }
         .search-box { position: relative; max-width: 500px; margin: 20px auto 0; }
         input { 
             width: 100%; padding: 15px 25px; border-radius: 50px; border: none; 
             font-size: 18px; outline: none; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
         }
 
-        /* Giao diện ô lưới (Grid) */
         .gallery { 
             display: grid; 
             grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); 
@@ -39,7 +38,7 @@
             justify-content: center; align-items: center; 
         }
         .popup-content { position: relative; max-width: 90%; max-height: 90%; text-align: center; }
-        .popup-content img { max-width: 100%; max-height: 80vh; border-radius: 5px; box-shadow: 0 0 20px rgba(255,255,255,0.2); }
+        .popup-content img { max-width: 100%; max-height: 75vh; border-radius: 5px; box-shadow: 0 0 20px rgba(255,255,255,0.2); }
         
         .nav-btn { 
             position: absolute; top: 50%; transform: translateY(-50%); 
@@ -52,17 +51,17 @@
 
         .close-btn { position: absolute; top: -50px; right: 0; color: white; font-size: 30px; cursor: pointer; }
         
-        /* Nút tải xuống Icon ⬇️ */
         .download-icon-btn { 
-            margin-top: 15px; display: inline-block; background: var(--primary); 
-            color: white; padding: 12px 25px; border-radius: 30px; 
-            text-decoration: none; font-weight: bold; font-size: 18px;
+            margin-top: 20px; display: inline-block; background: var(--primary); 
+            color: white; padding: 12px 30px; border-radius: 30px; 
+            text-decoration: none; font-weight: bold; font-size: 18px; border: none; cursor: pointer;
         }
         .download-icon-btn i { margin-right: 8px; }
 
-        @media (max-width: 768px) {
+        @media (max-width: 1000px) {
             .nav-btn { padding: 10px; font-size: 30px; }
-            .prev { left: 5px; } .next { right: 5px; }
+            .prev { left: 5px; background: rgba(0,0,0,0.3); border-radius: 50%; } 
+            .next { right: 5px; background: rgba(0,0,0,0.3); border-radius: 50%; }
             .gallery { grid-template-columns: repeat(2, 1fr); padding: 10px; }
         }
     </style>
@@ -85,7 +84,7 @@
         <img id="popupImg" src="" alt="Full size">
         <span class="nav-btn next" onclick="changeImage(1)"><i class="fas fa-chevron-right"></i></span>
         <br>
-        <a id="downloadBtn" href="" class="download-icon-btn" download><i class="fas fa-cloud-download-alt"></i> TẢI ẢNH</a>
+        <button onclick="downloadImage()" class="download-icon-btn"><i class="fas fa-cloud-download-alt"></i> TẢI ẢNH</button>
     </div>
 </div>
 
@@ -94,13 +93,11 @@
     let currentFiltered = [];
     let currentIndex = 0;
 
-    // 1. Load dữ liệu
     fetch('data.json')
         .then(res => res.json())
         .then(data => { allPhotos = data; })
-        .catch(err => alert("Chưa có file data.json hoặc lỗi file!"));
+        .catch(err => console.error("Lỗi tải data.json"));
 
-    // 2. Hàm tìm kiếm (Tự động hoặc Enter)
     function handleSearch(event) {
         const val = event.target.value.trim();
         if (val.length >= 2 || event.key === "Enter") {
@@ -115,7 +112,6 @@
         renderGallery(currentFiltered);
     }
 
-    // 3. Render ảnh ra ô lưới
     function renderGallery(data) {
         const container = document.getElementById('imageGallery');
         container.innerHTML = data.map((item, index) => `
@@ -125,16 +121,15 @@
         `).join('');
     }
 
-    // 4. Popup & Di chuyển ảnh
     function openPopup(index) {
         currentIndex = index;
         const item = currentFiltered[currentIndex];
-        const fullUrl = `https://lh3.googleusercontent.com/d/${item.drive_id}=s0`; // s0 để lấy ảnh gốc nét nhất
+        // Sử dụng định dạng link trực tiếp lh3
+        const fullUrl = `https://lh3.googleusercontent.com/d/${item.drive_id}=s0`;
         
         document.getElementById('popupImg').src = fullUrl;
-        document.getElementById('downloadBtn').href = fullUrl;
         document.getElementById('photoPopup').style.display = 'flex';
-        document.body.style.overflow = 'hidden'; // Khóa cuộn trang
+        document.body.style.overflow = 'hidden';
     }
 
     function closePopup() {
@@ -143,13 +138,44 @@
     }
 
     function changeImage(step) {
+        if (currentFiltered.length === 0) return;
         currentIndex += step;
         if (currentIndex >= currentFiltered.length) currentIndex = 0;
         if (currentIndex < 0) currentIndex = currentFiltered.length - 1;
         openPopup(currentIndex);
     }
 
-    // Đóng popup khi bấm ra ngoài ảnh
+    // --- TẢI ẢNH TRỰC TIẾP ---
+    async function downloadImage() {
+        const imageUrl = document.getElementById('popupImg').src;
+        const fileName = currentFiltered[currentIndex].filename || "anh_chay.jpg";
+        
+        try {
+            const response = await fetch(imageUrl);
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            // Nếu lỗi bảo mật (CORS), mở tab mới như cũ làm phương án dự phòng
+            window.open(imageUrl, '_blank');
+        }
+    }
+
+    // --- ĐIỀU KHIỂN BÀN PHÍM ---
+    document.addEventListener('keydown', function(event) {
+        if (document.getElementById('photoPopup').style.display === 'flex') {
+            if (event.key === "ArrowLeft") changeImage(-1);
+            if (event.key === "ArrowRight") changeImage(1);
+            if (event.key === "Escape") closePopup();
+        }
+    });
+
     window.onclick = function(event) {
         if (event.target == document.getElementById('photoPopup')) closePopup();
     }
