@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tìm Ảnh Giải Chạy - TCR 2026</title>
+    <style>
+        :root { --primary: #ff4d4d; --dark: #1a1a1a; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; margin: 0; padding: 0; text-align: center; }
+        
+        /* Header & Search Section */
+        header { background: var(--dark); color: white; padding: 40px 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        h1 { margin: 0 0 20px 0; font-size: 28px; text-transform: uppercase; letter-spacing: 2px; }
+        .search-container { position: relative; max-width: 400px; margin: 0 auto; }
+        input { 
+            width: 100%; padding: 15px 20px; font-size: 18px; border-radius: 30px; 
+            border: none; outline: none; box-sizing: border-box; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: 0.3s;
+        }
+        input:focus { box-shadow: 0 4px 20px rgba(255, 77, 77, 0.4); }
+
+        /* Gallery Section */
+        .gallery { 
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+            gap: 20px; padding: 40px; max-width: 1200px; margin: 0 auto; 
+        }
+        .photo-card { 
+            background: white; border-radius: 12px; overflow: hidden; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: transform 0.3s; 
+        }
+        .photo-card:hover { transform: translateY(-5px); }
+        
+        /* Thumbnail */
+        .photo-card img { 
+            width: 100%; height: 200px; object-fit: cover; 
+            cursor: pointer; display: block; background: #ddd;
+        }
+        
+        .info { padding: 15px; }
+        .bib-tag { background: var(--primary); color: white; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 14px; }
+        
+        .btn-download { 
+            display: block; margin-top: 15px; background: var(--dark); color: white; 
+            text-decoration: none; padding: 10px; border-radius: 6px; font-size: 14px; 
+            transition: 0.3s; 
+        }
+        .btn-download:hover { background: var(--primary); }
+
+        /* No Result Message */
+        #status { margin-top: 20px; color: #666; font-style: italic; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🏃‍♂️ TÌM ẢNH GIẢI CHẠY</h1>
+        <div class="search-container">
+            <input type="text" id="bibInput" placeholder="Nhập số BIB của bạn..." oninput="search()">
+        </div>
+        <div id="status">Nhập ít nhất 2 chữ số để tìm kiếm</div>
+    </header>
+
+    <div class="gallery" id="gallery"></div>
+
+    <script>
+        let photoData = [];
+
+        // 1. Tải dữ liệu từ file data.json
+        fetch('data.json')
+            .then(response => response.json())
+            .then(data => {
+                photoData = data;
+                console.log("Đã tải dữ liệu thành công!");
+            })
+            .catch(err => {
+                console.error("Lỗi tải file data.json: ", err);
+                document.getElementById('status').innerText = "Lỗi: Không tìm thấy file data.json";
+            });
+
+        function search() {
+            const query = document.getElementById('bibInput').value.trim();
+            const container = document.getElementById('gallery');
+            const status = document.getElementById('status');
+            
+            container.innerHTML = '';
+
+            if (query.length < 2) {
+                status.innerText = "Vui lòng nhập thêm số...";
+                return;
+            }
+
+            // 2. Lọc ảnh theo số BIB
+            const results = photoData.filter(item => {
+                // Kiểm tra xem số nhập vào có nằm trong danh sách bibs của ảnh không
+                return item.bibs.some(bib => bib.includes(query));
+            });
+
+            if (results.length === 0) {
+                status.innerText = "Không tìm thấy ảnh nào cho BIB " + query;
+            } else {
+                status.innerText = "Tìm thấy " + results.length + " tấm ảnh cho bạn!";
+                
+                results.forEach(item => {
+                    // Link Thumbnail (nén xuống s500 cho nhẹ máy)
+                    const thumbUrl = `https://lh3.googleusercontent.com/d/${item.drive_id}=s500`;
+                    // Link ảnh gốc (s0 là chất lượng cao nhất)
+                    const fullUrl = `https://lh3.googleusercontent.com/d/${item.drive_id}=s0`;
+
+                    const card = document.createElement('div');
+                    card.className = 'photo-card';
+                    card.innerHTML = `
+                        <img src="${thumbUrl}" alt="BIB ${item.bibs}" onclick="window.open('${fullUrl}', '_blank')">
+                        <div class="info">
+                            <span class="bib-tag">BIB: ${item.bibs.join(', ')}</span>
+                            <a href="${fullUrl}" class="btn-download" target="_blank">Tải ảnh gốc HD</a>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            }
+        }
+    </script>
+</body>
+</html>
